@@ -1,0 +1,12 @@
+build/
+bin/
+install/
+lib/*.a
+lib/*.so
+vocModel/
+model/
+cmake-build-debug/
+*.json
+*.param
+*.jpg
+*.names
