@@ -5,6 +5,7 @@ lib/*.a
 lib/*.so
 vocModel/
 model/
+.idea/
 cmake-build-debug/
 *.json
 *.param
