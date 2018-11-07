@@ -1,6 +1,10 @@
 ## C++ Interface for classification
 
-Reference : [demo](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp)
+1. classification: Reference : [demo](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp)
+2. detection: yolo3 interface
+```bash
+./detect [model_name_prefix] [image]
+```
 
 ### Build ```libmxnet.so``` from source 
 * For all platforms, the first step is to build MXNet from source, with `USE_CPP_PACKAGE = 1`. Details are available on [MXNet website](https://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=Python&processor=CPU).
