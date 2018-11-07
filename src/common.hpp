@@ -179,8 +179,9 @@ inline cv::Mat PlotBbox(cv::Mat img, NDArray bboxes, NDArray scores, NDArray lab
     for (int i = 0; i < num; ++i) {
         float score = scores.At(0, 0, i);
         float label = labels.At(0, 0, i);
+//        printf("I = %d, score: %f , label : %f \n",i,score,label);
         if (score < thresh) continue;
-        if (label < 0) continue;
+        if (label < 0) continue; //根据label筛选，如果为背景，label = -1
 
         int cls_id = static_cast<int>(label);
         if (colors.find(cls_id) == colors.end()) {

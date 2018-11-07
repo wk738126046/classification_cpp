@@ -27,6 +27,7 @@
 #include "clipp.hpp"
 #include <chrono>
 
+static bool _debug = false ;
 namespace synset {
 // some commonly used datasets
 static std::vector<std::string> VOC_CLASS_NAMES = {
@@ -71,6 +72,12 @@ static int min_size = 512;
 static int max_size = 640;
 static int multiplier = 32;  // just to ensure image shapes are multipliers of feature strides, for yolo3 models
 }  // namespace args
+
+struct CNNData{
+    std::string className;
+    float score;
+    float boundbox[4];
+};
 
 void ParseArgs(int argc, char** argv) {
     using namespace clipp;
@@ -125,7 +132,6 @@ void RunDemo() {
     Symbol net;
     std::map<std::string, NDArray> args, auxs;
     LoadCheckpoint(args::model, args::epoch, &net, &args, &auxs, ctx);
-    LOG(INFO) << "---1111---" ;
     // load image as data
     cv::Mat image = cv::imread(args::image, 1);
     // resize to avoid huge image, keep aspect ratio
@@ -138,11 +144,9 @@ void RunDemo() {
     // set input and bind executor
     auto data = AsData(image, ctx);
     args["data"] = data;
-    LOG(INFO) << "---111222---" ;
     Executor *exec = net.SimpleBind(
       ctx, args, std::map<std::string, NDArray>(),
       std::map<std::string, OpReqType>(), auxs);
-    LOG(INFO) << "---2222---" ;
     // begin forward
     NDArray::WaitAll();
     auto start = std::chrono::steady_clock::now();
@@ -158,23 +162,48 @@ void RunDemo() {
         LOG(INFO) << "Elapsed time {load->Result}: " << std::chrono::duration<double, std::milli>(end - mid).count() << " ms";
     }
 
-    // draw boxes
-    auto plt = viz::PlotBbox(image, bboxes, scores, ids, args::viz_thresh, synset::CLASS_NAMES, std::map<int, cv::Scalar>(), !args::quite);
-
-    // display drawn image
-    if (!args::no_display) {
-        cv::imshow("plot", plt);
-        cv::waitKey();
+    // add results parse
+    int num = bboxes.GetShape()[1];
+    CNNData sCnnData;
+    std::vector<CNNData> vCNNData;
+    for (int i = 0; i < num; ++i) {
+        float score = scores.At(0, 0, i);
+        float label = ids.At(0, 0, i);
+//        printf("I = %d, score: %f , label : %f \n",i,score,label);
+        if (score < args::viz_thresh) continue;
+        if (label < 0) continue; //根据label筛选，如果为背景，label = -1
+        int cls_id = static_cast<int>(label);
+        sCnnData.className = synset::CLASS_NAMES[cls_id];
+        sCnnData.score = score;
+        sCnnData.boundbox[0] = bboxes.At(0, i, 0);
+        sCnnData.boundbox[1] = bboxes.At(0, i, 1);
+        sCnnData.boundbox[2] = bboxes.At(0, i, 2);
+        sCnnData.boundbox[3] = bboxes.At(0, i, 3);
+        vCNNData.push_back(sCnnData);
     }
+    printf("cnndata size : %ld \n",vCNNData.size());
 
-    // output image
-    if (!args::output.empty()) {
-        cv::imwrite(args::output, plt);
+    // Visualization
+    if(_debug){
+        // draw boxes
+        auto plt = viz::PlotBbox(image, bboxes, scores, ids, args::viz_thresh, synset::CLASS_NAMES, std::map<int, cv::Scalar>(), !args::quite);
+
+        // display drawn image
+        if (!args::no_display) {
+            cv::imshow("plot", plt);
+            cv::waitKey();
+        }
+
+        // output image
+        if (!args::output.empty()) {
+            cv::imwrite(args::output, plt);
+        }
     }
 
     delete exec;
     MXNotifyShutdown();
 }
+
 
 int main(int argc, char** argv) {
     ParseArgs(argc, argv);
